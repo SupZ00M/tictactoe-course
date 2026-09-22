@@ -17,7 +17,8 @@ using game::MoveResult;
  struct Cell {
     Sign sign = Sign::NONE;     // NONE / X / O / WALL
     int  dir[4] = {0, 0, 0, 0}; // Слой 1: очки по 4 направлениям
-     int  bonus  = 0;     
+     int  bonus  = 0;    
+       int  fork   = 0;  
     int  score  = 0;            // Слой 2+: агрегат
     bool filled() const { return sign != Sign::NONE; }
   };
@@ -69,6 +70,8 @@ public:
 
   void main_eval(const State &state, Field &f) const;
    void topeval(const State &state, Field &f) const;
+   int fork(const State &state, Sign sign, int x, int y, int L) const;
+   void forkeval(const State &state, Field &f) const;
 
   static Sign opp_sign(Sign s);
   int max_run(const State &state, Sign sign, int x, int y,

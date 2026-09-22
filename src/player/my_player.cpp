@@ -88,7 +88,7 @@ void MyPlayer::main_eval(const State &state, Field &f) const {
         const int dx = dirs[d][0], dy = dirs[d][1];
         const int my_run  = max_run(state, me,  x, y, dx, dy, L);
         const int opp_run = max_run(state, opp, x, y, dx, dy, L);
-        long long v = run_weight(my_run) + run_weight(opp_run) / 1;
+        long long v =(run_weight(my_run)+ run_weight(opp_run));
         c.dir[d] = (v > 1e9) ? (int)1e9 : (int)v;
       }
 
@@ -155,6 +155,107 @@ void MyPlayer::topeval(const State &state, Field &f) const {
 
 
 
+int MyPlayer::fork(const State &state, Sign sign,
+                                 int x, int y, int L) const {
+  const auto &o = state.get_opts();
+  static const int dirs[4][2] = {{1,0},{0,1},{1,1},{1,-1}};
+  int count = 0;
+
+  for (auto &d : dirs) {
+    const int dx = d[0], dy = d[1];
+
+    // считаем подряд sign в обе стороны от (x,y); сама (x,y) = sign
+    int left = 0;
+    for (int i = 1; i < L; ++i) {
+      const int nx = x - dx * i, ny = y - dy * i;
+      if (nx < 0 || ny < 0 || nx >= o.cols || ny >= o.rows) break;
+      if (state.get_value(nx, ny) != sign) break;
+      ++left;
+    }
+    int right = 0;
+    for (int i = 1; i < L; ++i) {
+      const int nx = x + dx * i, ny = y + dy * i;
+      if (nx < 0 || ny < 0 || nx >= o.cols || ny >= o.rows) break;
+      if (state.get_value(nx, ny) != sign) break;
+      ++right;
+    }
+
+    const int run = 1 + left + right;
+
+    // проверяем открытость концов (следующая клетка за концом линии)
+    bool left_open = false, right_open = false;
+
+    {
+      const int nx = x - dx * (left + 1);
+      const int ny = y - dy * (left + 1);
+      if (nx >= 0 && ny >= 0 && nx < o.cols && ny < o.rows) {
+        if (state.get_value(nx, ny) == Sign::NONE) left_open = true;
+      }
+    }
+    {
+      const int nx = x + dx * (right + 1);
+      const int ny = y + dy * (right + 1);
+      if (nx >= 0 && ny >= 0 && nx < o.cols && ny < o.rows) {
+        if (state.get_value(nx, ny) == Sign::NONE) right_open = true;
+      }
+    }
+
+    // классификация
+    if (run >= L) {
+      // победа — обрабатывается отдельно, не считаем как форк
+    } else if (run == L - 1 && left_open && right_open) {
+      ++count;   // открытая четвёрка (для L=5 это 4 подряд)
+    } else if (run == L - 2 && left_open && right_open) {
+      ++count;   // открытая тройка (для L=5 это 3 подряд)
+    }
+  }
+  return count;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void MyPlayer::forkeval(const State &state, Field &f) const {
+  const int L = state.get_opts().win_len;
+  const Sign me  = m_sign;
+  const Sign opp = opp_sign(me);
+
+  for (int y = 0; y < f.rows; ++y) {
+    for (int x = 0; x < f.cols; ++x) {
+      Cell &c = f.at(x, y);
+      if (c.filled()) { c.fork = 0; continue; }
+
+      const int my_forks  = fork(state, me,  x, y, L);
+      const int opp_forks = fork(state, opp, x, y, L);
+
+      int v = 0;
+      if (my_forks >= 3)      v = 3000;   // тройная вилка — почти победа
+else if (my_forks == 2) v = 2500;   // двойная вилка
+else if (my_forks == 1) v =  500;   // одиночная открытая угроза
+
+if (opp_forks >= 2)     v += 2000; 
+      c.fork = v;
+    }
+  }
+}
+
+
+
+
+
 
 
 
@@ -200,7 +301,9 @@ Point MyPlayer::make_move(const State &state) {
 
   Field f = build_field(state);
   main_eval(state, f);   // Слой 1: dir[] по направлениям
-  topeval(state, f);     // Слой 2: score по клеткам
+  topeval(state, f); 
+  forkeval(state, f); 
+       // Слой 2: score по клеткам
 
   Point best{-1, -1};
   int best_score = -1;
@@ -212,9 +315,8 @@ Point MyPlayer::make_move(const State &state) {
       const Cell &c = f.at(x, y);
       if (c.filled()) continue;
 
-      int s = c.score;
-      // tie-breaker: чуть предпочитаем центр
-      s += (o.rows + o.cols) - (std::abs(x - cx) + std::abs(y - cy));
+      long long s = (long long)c.score + (long long)c.fork;
+s += (o.rows + o.cols) - (std::abs(x - cx) + std::abs(y - cy));
 
       if (s > best_score) { best_score = s; best = {x, y}; }
     }
