@@ -10,13 +10,14 @@ using game::IPlayer;
 using game::Point;
 using game::Sign;
 using game::State;
+using game::MoveResult;
 
-
-
+   static long long run_weight(int n);
 
  struct Cell {
     Sign sign = Sign::NONE;     // NONE / X / O / WALL
     int  dir[4] = {0, 0, 0, 0}; // Слой 1: очки по 4 направлениям
+     int  bonus  = 0;     
     int  score  = 0;            // Слой 2+: агрегат
     bool filled() const { return sign != Sign::NONE; }
   };
@@ -44,10 +45,11 @@ class MyPlayer : public IPlayer {
   const char *m_name;
 
 
-  static constexpr int MAX_BALL = 1000;
+  static constexpr int MAX_BALL = 500;
   static constexpr int K_OWN    = 1;
   static constexpr int K_OPP    = 1;
-
+  static constexpr int MAX_LINE = 1000000000;
+  
  
 
 
@@ -64,12 +66,16 @@ public:
 
   Field build_field(const State &state) const;
 
- 
+
   void main_eval(const State &state, Field &f) const;
+   void topeval(const State &state, Field &f) const;
 
   static Sign opp_sign(Sign s);
+  int max_run(const State &state, Sign sign, int x, int y,
+              int dx, int dy, int L) const;
 
 
 };
 
 }; // namespace ttt::my_player
+//  cmake -DBUILD_TTTCORE=PREBUILT .. && make && tests/test_stats_vs_baseline

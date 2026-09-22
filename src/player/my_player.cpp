@@ -1,5 +1,6 @@
 #include "my_player.hpp"
 #include <cstdlib>
+#include <cstdio>
 #include <cmath>
 
 namespace ttt::my_player {
@@ -28,9 +29,34 @@ Field MyPlayer::build_field(const State &state) const {
   return f;
 }
 
+// max_run — сколько ПОДРЯД фишек sign через (x,y) в направлении (dx,dy),
+// с учётом самой клетки (её как будто только что поставили)
+int MyPlayer::max_run(const State &state, Sign sign, int x, int y,
+                      int dx, int dy, int L) const {
+  const auto &o = state.get_opts();
+  int left = 0;
+  for (int i = 1; i < L; ++i) {
+    int nx = x - dx*i, ny = y - dy*i;
+    if (nx < 0 || ny < 0 || nx >= o.cols || ny >= o.rows) break;
+    if (state.get_value(nx, ny) != sign) break;
+    ++left;
+  }
+  int right = 0;
+  for (int i = 1; i < L; ++i) {
+    int nx = x + dx*i, ny = y + dy*i;
+    if (nx < 0 || ny < 0 || nx >= o.cols || ny >= o.rows) break;
+    if (state.get_value(nx, ny) != sign) break;
+    ++right;
+  }
+  return 1 + left + right;
+}
 
-
-
+// вес за линию длины n
+static long long run_weight(int n) {
+  if (n <= 0) return 0;
+  if (n == 1) return 1;
+  return 1LL << (2 * n);   // 4, 16, 64, 256, ...
+}
 
 //layers
 
@@ -39,66 +65,90 @@ Field MyPlayer::build_field(const State &state) const {
 
 void MyPlayer::main_eval(const State &state, Field &f) const {
   const int L = state.get_opts().win_len;
-  const Sign opp = opp_sign(m_sign);
-  static const int dirs[4][2] = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
+  const Sign me  = m_sign;
+  const Sign opp = opp_sign(me);
+  static const int dirs[4][2] = {{1,0},{0,1},{1,1},{1,-1}};
 
   for (int y = 0; y < f.rows; ++y) {
     for (int x = 0; x < f.cols; ++x) {
       Cell &c = f.at(x, y);
 
-      // занятые клетки не оцениваем
-      if (c.filled()) {
+      // WALL и чужие — обнуляем всё
+      if (c.sign == Sign::WALL || c.sign == opp) {
         for (int d = 0; d < 4; ++d) c.dir[d] = 0;
+        c.bonus = 0;
         continue;
       }
 
+      // свободные И свои — считаем dir[d] как если бы клетка была пустой
+      // (для своих: max_run по-прежнему считает их как me, но сама клетка
+      //  мысленно пустая — это уже заложено, потому что max_run считает от (x,y)
+      //  как будто там стоит me, не читая текущее значение)
       for (int d = 0; d < 4; ++d) {
-        const int dx = dirs[d][0];
-        const int dy = dirs[d][1];
+        const int dx = dirs[d][0], dy = dirs[d][1];
+        const int my_run  = max_run(state, me,  x, y, dx, dy, L);
+        const int opp_run = max_run(state, opp, x, y, dx, dy, L);
+        long long v = run_weight(my_run) + run_weight(opp_run) / 1;
+        c.dir[d] = (v > 1e9) ? (int)1e9 : (int)v;
+      }
 
-        int r1 = 0;
-        for (int i = 1; i <= L - 1; ++i) {
-          if (!f.valid(x + dx * i, y + dy * i)) break;
-          Sign v = f.at(x + dx * i, y + dy * i).sign;
-          if (v == Sign::WALL || v == opp) break;
-          ++r1;
-        }
-        int r2 = 0;
-        for (int i = 1; i <= L - 1; ++i) {
-          if (!f.valid(x - dx * i, y - dy * i)) break;
-          Sign v = f.at(x - dx * i, y - dy * i).sign;
-          if (v == Sign::WALL || v == opp) break;
-          ++r2;
-        }
-
-        const int w = r1 + r2 - L;
-        c.dir[d] = (w > 0) ? (w * 2) : 0;
+      // у свободных bonus = 0, у своих bonus = собственный dir (усреднённый)
+      if (c.filled()) {
+        // своя фишка: bonus = её собственный dir, как если бы была пустой
+        // берём максимум по 4 направлениям — или сумму, на ваш выбор
+        int b = 0;
+        for (int d = 0; d < 4; ++d) if (c.dir[d] > b) b = c.dir[d];
+        c.bonus = b;
+      } else {
+        c.bonus = 0;
       }
     }
   }
 }
 
+void MyPlayer::topeval(const State &state, Field &f) const {
+  const int L = state.get_opts().win_len;
+  const Sign opp = opp_sign(m_sign);
+  static const int dirs[4][2] = {{1,0},{0,1},{1,1},{1,-1}};
 
+  for (int y = 0; y < f.rows; ++y) {
+    for (int x = 0; x < f.cols; ++x) {
+      Cell &c = f.at(x, y);
+      if (c.filled()) { c.score = -1; continue; }
 
+      long long total = 0;
 
+      for (int d = 0; d < 4; ++d) {
+        const int dx = dirs[d][0], dy = dirs[d][1];
 
+        total += c.dir[d];   // свой вклад (у свободной bonus = 0)
 
+        // "+" до преграды/opp, не дальше L-1
+        for (int i = 1; i <= L - 1; ++i) {
+          const int nx = x + dx * i, ny = y + dy * i;
+          if (!f.valid(nx, ny)) break;
+          const Cell &nb = f.at(nx, ny);
+          if (nb.sign == Sign::WALL) break;
+          if (nb.sign == opp) break;
+          // свободная → dir[d]; своя → bonus (её dir как если бы была пустой)
+          total += (nb.filled() ? nb.bonus : nb.dir[d]);
+        }
 
+        // "−" аналогично
+        for (int i = 1; i <= L - 1; ++i) {
+          const int nx = x - dx * i, ny = y - dy * i;
+          if (!f.valid(nx, ny)) break;
+          const Cell &nb = f.at(nx, ny);
+          if (nb.sign == Sign::WALL) break;
+          if (nb.sign == opp) break;
+          total += (nb.filled() ? nb.bonus : nb.dir[d]);
+        }
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      c.score = (total > 1e9) ? (int)1e9 : (int)total;
+    }
+  }
+}
 
 
 
@@ -144,19 +194,14 @@ void MyPlayer::main_eval(const State &state, Field &f) const {
 
 
 
+
 Point MyPlayer::make_move(const State &state) {
   const auto &o = state.get_opts();
 
-  // Слой 0: быстрая победа / блок
-  Point fast{-1, -1};
-
-
-  // Построить поле и прогнать через слои
   Field f = build_field(state);
+  main_eval(state, f);   // Слой 1: dir[] по направлениям
+  topeval(state, f);     // Слой 2: score по клеткам
 
-  main_eval(state, f);   // sign → dir[]
-
-  // Выбор максимума по score
   Point best{-1, -1};
   int best_score = -1;
   const int cx = o.cols / 2;
@@ -168,15 +213,16 @@ Point MyPlayer::make_move(const State &state) {
       if (c.filled()) continue;
 
       int s = c.score;
+      // tie-breaker: чуть предпочитаем центр
       s += (o.rows + o.cols) - (std::abs(x - cx) + std::abs(y - cy));
 
-      if (s > best_score) {
-        best_score = s;
-        best = {x, y};
-      }
+      if (s > best_score) { best_score = s; best = {x, y}; }
     }
   }
-    if (best.x < 0) {
+
+  std::printf("[mv] move=%d best=(%d,%d) score=%d\n",
+            state.get_move_no(), best.x, best.y, best_score);
+  if (best.x < 0) {
     for (int y = 0; y < o.rows; ++y)
       for (int x = 0; x < o.cols; ++x)
         if (state.get_value(x, y) == Sign::NONE)
@@ -184,7 +230,6 @@ Point MyPlayer::make_move(const State &state) {
   }
   return best;
 }
-
 
 
 
