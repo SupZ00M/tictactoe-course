@@ -58,3 +58,13 @@ add_subdirectory("tests")
 if (BUILD_TTTREMOTE)
   add_subdirectory("src/remote")
 endif()
+
+
+add_executable(test_stats_self test_stats_self.cpp)
+target_link_libraries(test_stats_self PRIVATE tttplayer)
+
+add_executable(test_stats_easy test_stats_easy.cpp)
+target_link_libraries(test_stats_easy PRIVATE tttplayer)
+
+add_executable(test_stats_hard test_stats_hard.cpp)
+target_link_libraries(test_stats_hard PRIVATE tttplayer)

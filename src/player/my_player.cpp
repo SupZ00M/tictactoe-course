@@ -92,10 +92,9 @@ void MyPlayer::main_eval(const State &state, Field &f) const {
         c.dir[d] = (v > 1e9) ? (int)1e9 : (int)v;
       }
 
-      // у свободных bonus = 0, у своих bonus = собственный dir (усреднённый)
+
       if (c.filled()) {
-        // своя фишка: bonus = её собственный dir, как если бы была пустой
-        // берём максимум по 4 направлениям — или сумму, на ваш выбор
+      
         int b = 0;
         for (int d = 0; d < 4; ++d) if (c.dir[d] > b) b = c.dir[d];
         c.bonus = b;
