@@ -51,7 +51,14 @@ add_library(tttplayer STATIC ${player_src})
 target_link_libraries(tttplayer ${TTTCORE_LIB})
 
 # NOTE: enable or disable ctest
+#enable_testing()
+#add_subdirectory("tests")
+
+
 enable_testing()
+
+
+
 add_subdirectory("tests")
 
 # NOTE: this submodule builds sources for remote game

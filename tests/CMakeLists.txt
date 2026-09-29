@@ -27,16 +27,26 @@ if((BUILD_TTTCORE STREQUAL "FULL") OR (BUILD_TTTCORE STREQUAL "PREBUILT"))
 
 
   
-add_executable(test_stats_self test_stats_self.cpp)
+
+enable_testing()
+
+
+add_executable(test_stats_self     test_stats_self.cpp)
 target_link_libraries(test_stats_self PRIVATE tttplayer)
 
 add_executable(test_stats_easy  test_stats_easy.cpp)
 target_link_libraries(test_stats_easy PRIVATE tttplayer)
 
-
 add_executable(test_stats_hard  test_stats_hard.cpp)
 target_link_libraries(test_stats_hard PRIVATE tttplayer)
 
+add_executable(test_stats_all      test_stats_all.cpp)
 
-add_executable(test_stats_all  test_stats_all.cpp)
+add_test(NAME self_play  COMMAND test_stats_self 42)
+add_test(NAME vs_easy    COMMAND test_stats_easy 42)
+add_test(NAME vs_hard    COMMAND test_stats_hard 42)
+
+set_tests_properties(self_play vs_easy vs_hard PROPERTIES TIMEOUT 300)
+
+
 endif()
