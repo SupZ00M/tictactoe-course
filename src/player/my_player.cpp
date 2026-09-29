@@ -243,11 +243,13 @@ void MyPlayer::forkeval(const State &state, Field &f) const {
 
       int v = 0;
       if (my_forks >= 3)      v = 3000;   // тройная вилка — почти победа
-else if (my_forks == 2) v = 2500;   // двойная вилка
-else if (my_forks == 1) v =  500;   // одиночная открытая угроза
+else if (my_forks == 2) v = 1500;   // двойная вилка
+else if (my_forks == 1) v =  750;   // одиночная открытая угроза
 
 if (opp_forks >= 2)     v += 2000; 
+else if (my_forks == 1) v = 500;  
       c.fork = v;
+
     }
   }
 }
@@ -322,8 +324,8 @@ s += (o.rows + o.cols) - (std::abs(x - cx) + std::abs(y - cy));
     }
   }
 
-  std::printf("[mv] move=%d best=(%d,%d) score=%d\n",
-            state.get_move_no(), best.x, best.y, best_score);
+  /*std::printf("[mv] move=%d best=(%d,%d) score=%d\n",
+            state.get_move_no(), best.x, best.y, best_score);*/
   if (best.x < 0) {
     for (int y = 0; y < o.rows; ++y)
       for (int x = 0; x < o.cols; ++x)
