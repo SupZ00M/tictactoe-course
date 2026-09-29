@@ -24,4 +24,19 @@ if((BUILD_TTTCORE STREQUAL "FULL") OR (BUILD_TTTCORE STREQUAL "PREBUILT"))
   # Human player test
   add_executable(test_my_player_vs_human test_my_player_vs_human.cpp human_player.cpp)
   target_link_libraries(test_my_player_vs_human tttplayer)
+
+
+  
+add_executable(test_stats_self test_stats_self.cpp)
+target_link_libraries(test_stats_self PRIVATE tttplayer)
+
+add_executable(test_stats_easy  test_stats_easy.cpp)
+target_link_libraries(test_stats_easy PRIVATE tttplayer)
+
+
+add_executable(test_stats_hard  test_stats_hard.cpp)
+target_link_libraries(test_stats_hard PRIVATE tttplayer)
+
+
+add_executable(test_stats_all  test_stats_all.cpp)
 endif()
