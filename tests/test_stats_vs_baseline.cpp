@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 
     
     ttt::my_player::MyPlayer p1("MyPlayer"); ////поместите вашего игрока сюдаget_harder_player
-  //ttt::game::IPlayer *p1 = ttt::baseline::get_harder_player("BaselineHard"); 
+   //ttt::game::IPlayer *p1 = ttt::baseline::get_harder_player("BaselineHard"); 
 
     ttt::game::IPlayer *p2 = ttt::baseline::get_harder_player("BaselineEasy"); //здесь вы можете выбрать между базовыми игроками: сложным и лёгким
 

@@ -26,7 +26,8 @@ if((BUILD_TTTCORE STREQUAL "FULL") OR (BUILD_TTTCORE STREQUAL "PREBUILT"))
   target_link_libraries(test_my_player_vs_human tttplayer)
 
 
-  
+  add_executable(test_genetic test_genetic.cpp)
+  target_link_libraries(test_genetic PRIVATE tttplayer)
 
 enable_testing()
 
