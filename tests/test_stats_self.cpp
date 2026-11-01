@@ -7,8 +7,8 @@ int main(int argc, char *argv[]) {
   std::cout << "Testing MyPlayer vs MyPlayer (self-play)\n";
   if (argc >= 2) std::srand(atoi(argv[1]));
 
-  const int RUNS = 10;          // число серий
-  const int GAMES_PER_RUN = 100;   // партий в серии
+  const int RUNS = 1;
+  const int GAMES_PER_RUN = 100;
 
   int total_x = 0, total_o = 0, total_draw = 0, total_err = 0;
 

@@ -97,9 +97,8 @@ for (int i = 0; i < POP_SIZE; ++i) {
 std::printf("  mean=%.4f max=%.4f (#%d)\n",
             sum / POP_SIZE, mx, mx_idx);
 
-    // 3. Турнирный отбор + элитизм
+    
     std::vector<Genome> next;
-    // элитизм — топ-2
     {
       std::vector<int> idx(POP_SIZE);
       for (int i = 0; i < POP_SIZE; ++i) idx[i] = i;

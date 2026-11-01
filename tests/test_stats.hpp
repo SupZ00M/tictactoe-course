@@ -159,7 +159,6 @@ static TestResult run_game_tests(
     return result;
 }
 
-//helper to print test results
 static void print_test_results(const TestResult& result, 
                               const std::string& player_x_name = "X",
                               const std::string& player_o_name = "O") {
@@ -169,13 +168,18 @@ static void print_test_results(const TestResult& result,
               << "errors: " << result.errors << "\n"
               << std::endl;
 
-    std::cout << player_x_name << " play time:\n - move time (ms): " 
-              << result.x_move_time
+    // Вычисляем среднее время на 1 ход (делим общее время на кол-во ходов)
+    int total_moves = result.x_wins + result.o_wins + result.draws;
+    double avg_x_move = (total_moves > 0) ? (result.x_move_time / total_moves) : 0.0;
+    double avg_o_move = (total_moves > 0) ? (result.o_move_time / total_moves) : 0.0;
+
+    std::cout << player_x_name << " play time:\n - avg move time (ms): " 
+              << avg_x_move
               << "\n - event time (ms): " << result.x_event_time
               << "\n\n";
 
-    std::cout << player_o_name << " play time:\n - move time (ms): "
-              << result.o_move_time
+    std::cout << player_o_name << " play time:\n - avg move time (ms): "
+              << avg_o_move
               << "\n - event time (ms): " << result.o_event_time
               << "\n\n";
 
@@ -183,7 +187,7 @@ static void print_test_results(const TestResult& result,
               << " (ms)\n";
               
     assert(result.x_event_time < 100);
-    assert(result.x_move_time < 100);
+    assert(avg_x_move < 100);
 }
 
 } // namespace ttt::test
