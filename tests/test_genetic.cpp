@@ -58,10 +58,20 @@ int main(int argc, char *argv[]) {
 
 
   std::vector<double> fit(POP_SIZE);
- Genome best_genome;
-best_genome.g ={  19, 8, 5, 13, 4, 2, 1, 100, 16100, 12000, 5400, 7300, 12600, 500000,50000, 20000,2000,200,30,2};
-for (int i = 0; i < POP_SIZE; ++i) pop[i] = best_genome;
-double best_fit = -1.0;
+  Genome best_genome;
+  best_genome.g = {19, 8, 5, 13, 4, 2, 1, 100, 16100, 12000, 5400, 7300, 12600, 500000, 50000, 20000, 2000, 200, 30, 2};
+
+  // 1. Инициализация: заполняем всю популяцию случайными генами
+  for (int i = 0; i < POP_SIZE; ++i) {
+    pop[i] = random_genome(rng);
+  }
+  
+ 
+  for (int i = 0; i < POP_SIZE/2; ++i) {
+    pop[i] = best_genome;
+  }
+
+  double best_fit = -1.0;
   for (int gen = 0; gen < GENERATIONS; ++gen) {
     std::printf("=== generation %d ===\n", gen);
 
